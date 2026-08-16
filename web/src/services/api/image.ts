@@ -1117,16 +1117,21 @@ export async function fetchImageModels(config: AiConfig) {
     const channel = localChannelForActiveModel(config);
     if (isMimoChannel(channel || { baseUrl: config.baseUrl })) return [...mimoModels];
     try {
-        const response = await axios.get<{ data?: Array<{ id?: string }>; error?: { message?: string } }>(buildApiUrl(config.baseUrl, "/models"), {
+        const response = await axios.get<{ data?: Array<{ id?: string; model?: string; type?: string }>; error?: { message?: string } }>(buildApiUrl(config.baseUrl, "/models"), {
             headers: {
                 Authorization: `Bearer ${config.apiKey}`,
             },
             timeout: IMAGE_REQUEST_TIMEOUT_SECONDS * 1000,
         });
-        return (response.data.data || [])
-            .map((model) => model.id)
+        const atlasCloud = /(?:^|\.)atlascloud\.ai$/i.test(new URL(config.baseUrl).hostname);
+        const capability = channel?.capability || "text";
+        const models = (response.data.data || [])
+            .filter((item) => !atlasCloud || !item.type || item.type.toLowerCase() === capability)
+            .map((item) => item.id || item.model)
             .filter((id): id is string => Boolean(id))
             .sort((a, b) => a.localeCompare(b));
+        if (!models.length && (response.data.data || []).length) throw new Error(`接口返回了模型，但没有可用于${capability === "image" ? "图片" : capability === "video" ? "视频" : capability === "audio" ? "音频" : "文本"} API 的模型`);
+        return models;
     } catch (error) {
         throw new Error(readAxiosError(error, "读取模型失败"));
     }
