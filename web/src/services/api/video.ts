@@ -5,6 +5,7 @@ import { boolConfig, isSeedanceVideoConfig, normalizeSeedanceRatio } from "@/lib
 import { isKIEGrokVideoModel, isKIEKlingV3Config, kieKlingOmniVariant } from "@/components/video-settings-panel";
 import { modelKey, supportsVideoAudioGeneration } from "@/lib/video-model-capabilities";
 import { resolveMediaUrl, uploadMediaFile } from "@/services/file-storage";
+import { atlasGenerateVideo, isAtlasCloudConfig } from "@/services/api/atlas-cloud";
 import { imageToDataUrl, resolveImageUrl } from "@/services/image-storage";
 import { buildApiUrl, channelIdForActiveModel, directAIProviderForConfig, localChannelForActiveModel, type AiConfig, type VideoElementReference } from "@/stores/use-config-store";
 import { useUserStore } from "@/stores/use-user-store";
@@ -89,8 +90,21 @@ export async function requestVideoGeneration(config: AiConfig, prompt: string, r
 export async function createVideoGenerationTask(config: AiConfig, prompt: string, references: ReferenceImage[] | VideoReferenceInput = [], onProgress?: VideoProgressHandler, options?: string | VideoTaskCreateOptions): Promise<CreatedVideoGenerationTask> {
     const model = config.model || config.videoModel;
     const systemPrompt = (config.systemPrompts.video || config.systemPrompt).trim();
-    const body = await createVideoRequestBody(config, model, systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt, normalizeVideoReferenceInput(references));
     const startedAt = Date.now();
+    if (isAtlasCloudConfig(config)) {
+        try {
+            const referenceImages = normalizeVideoReferenceInput(references).references || [];
+            const generated = await atlasGenerateVideo(config, systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt, referenceImages);
+            const created: VideoResponse = { id: generated.id, status: "completed", video_url: generated.url, url: generated.url };
+            onProgress?.(100, created);
+            return { task: created, pollId: generated.id, startedAt, requestBody: { model, prompt, provider: "atlascloud" } };
+        } catch (error) {
+            const { message, detail } = readAxiosError(error, "视频生成失败");
+            void writeVideoAICallLog(config, model, "/model/generateVideo", "POST", startedAt, 0, stringifyLogPayload({ model, prompt, provider: "atlascloud" }), stringifyLogPayload(detail), message);
+            throw new VideoRequestError(message, detail);
+        }
+    }
+    const body = await createVideoRequestBody(config, model, systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt, normalizeVideoReferenceInput(references));
     try {
         const createOptions = normalizeVideoTaskCreateOptions(options);
         const accountProxy = usesAccountProxy(config);
@@ -115,6 +129,12 @@ function normalizeVideoTaskCreateOptions(options?: string | VideoTaskCreateOptio
 
 export async function pollCreatedVideoGenerationTask(config: AiConfig, task: VideoResponse, { startedAt = Date.now(), requestBody, initialDelayMs = 0, onProgress, onPoll }: { startedAt?: number; requestBody?: unknown; initialDelayMs?: number; onProgress?: VideoProgressHandler; onPoll?: (task: VideoResponse) => void } = {}) {
     const model = config.model || config.videoModel;
+    if (isAtlasCloudConfig(config)) {
+        const videoUrl = task.video_url || task.url || "";
+        if (!videoUrl) throw new VideoRequestError("视频生成完成但没有返回视频地址", task);
+        onProgress?.(100, task);
+        return buildVideoGenerationResult(task, videoUrl, Date.now() - startedAt);
+    }
     const pollId = videoPollId(model, task);
     if (!pollId) throw new VideoRequestError("视频接口没有返回任务 ID", task);
     const directProvider = !usesAccountProxy(config) ? directAIProviderForConfig(config) : null;

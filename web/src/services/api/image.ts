@@ -3,6 +3,7 @@ import axios from "axios";
 import { dataUrlToFile } from "@/lib/image-utils";
 import { isKIESeedreamLayerDecompositionModel } from "@/lib/kie-models";
 import { isMimoChannel, mimoModels } from "@/lib/mimo-tts";
+import { atlasGenerateImage, isAtlasCloudConfig } from "@/services/api/atlas-cloud";
 import { imageToDataUrl, resolveImageUrl } from "@/services/image-storage";
 import { buildApiUrl, channelIdForActiveModel, directAIProviderForConfig, localChannelForActiveModel, type AiConfig } from "@/stores/use-config-store";
 import { useUserStore } from "@/stores/use-user-store";
@@ -862,6 +863,9 @@ async function requestAndParseImages(config: AiConfig, endpoint: string, request
 
 async function requestImages(config: AiConfig & { seedIndex?: number; seedCount?: number }, prompt: string, references: ReferenceImage[]): Promise<GeneratedImage[]> {
     const params = createImageRequestParams(config);
+    if (isAtlasCloudConfig(config)) {
+        return atlasGenerateImage(config, withPromptGuard(config, withSystemPrompt(config, prompt)), references, params.size || config.size, params.quality || config.quality);
+    }
     const inputImageDataUrls = references.length ? await Promise.all(references.map((image) => imageToDataUrl(image))) : [];
     const useConcurrentSingleRequests = config.apiMode === "responses" || config.codexCli || config.streamImages;
     if (params.n > 1 && useConcurrentSingleRequests) {
@@ -901,6 +905,23 @@ export async function requestEdit(config: AiConfig & { seedIndex?: number; seedC
 }
 
 export async function createCanvasImageTask(config: AiConfig & { seedIndex?: number; seedCount?: number }, prompt: string, references: ReferenceImage[], options: CanvasImageTaskOptions = {}): Promise<CanvasImageTask> {
+    if (isAtlasCloudConfig(config)) {
+        const images = await requestImages({ ...config, count: "1" }, prompt, references);
+        const [image] = images;
+        if (!image) throw new Error("接口没有返回图片");
+        return {
+            id: options.clientTaskId || nanoid(),
+            source: options.source || "canvas",
+            source_id: options.sourceId || "",
+            node_id: options.nodeId || "",
+            model: config.model,
+            prompt,
+            status: "completed",
+            progress: 100,
+            image_url: image.dataUrl,
+            ...(isKIESeedreamLayerDecompositionModel(config.model) ? { image_urls: images.map((item) => item.dataUrl) } : {}),
+        };
+    }
     if (!usesAccountProxy(config)) {
         const images = await requestImages({ ...config, count: "1" }, prompt, references);
         const [image] = images;
@@ -1148,20 +1169,11 @@ export async function testImageConnection(config: AiConfig) {
             validateStatus: () => true,
         });
         if (response.status >= 200 && response.status < 300) return;
-        if (response.status === 404 && isArkBaseUrl(config.baseUrl)) return;
         const payload = response.data as { error?: { message?: string }; message?: string } | undefined;
         const message = payload?.error?.message || payload?.message || `HTTP ${response.status}`;
         throw new Error(message);
     } catch (error) {
         throw new Error(readAxiosError(error, "连接测试失败"));
-    }
-}
-
-function isArkBaseUrl(baseUrl: string) {
-    try {
-        return /(?:^|\.)(?:volces\.com|bytepluses\.com)$/i.test(new URL(baseUrl).hostname);
-    } catch {
-        return false;
     }
 }
 
