@@ -228,14 +228,39 @@ export function AppConfigModal() {
         setEditingApiId(channel.id);
     };
 
-    const setChannelCurrent = (channel: LocalModelChannel) => {
+    const setChannelCurrent = async (channel: LocalModelChannel) => {
         const capability = channel.capability || "text";
+        const modelKey = capability === "image" ? "imageModel" as const : capability === "video" ? "videoModel" as const : capability === "audio" ? "audioModel" as const : "textModel" as const;
+        const currentModel = config[modelKey];
+        const nextModel = channel.models.includes(currentModel) ? currentModel : channel.models[0] || currentModel;
+        const nextConfig: AiConfig = {
+            ...config,
+            activeChannelId: channel.id,
+            imageChannelId: capability === "image" ? channel.id : config.imageChannelId,
+            videoChannelId: capability === "video" ? channel.id : config.videoChannelId,
+            audioChannelId: capability === "audio" ? channel.id : config.audioChannelId,
+            textChannelId: capability === "text" ? channel.id : config.textChannelId,
+            [modelKey]: nextModel,
+        };
         updateConfig("activeChannelId", channel.id);
         if (capability === "image") updateConfig("imageChannelId", channel.id);
         else if (capability === "video") updateConfig("videoChannelId", channel.id);
         else if (capability === "audio") updateConfig("audioChannelId", channel.id);
         else updateConfig("textChannelId", channel.id);
-        message.success("已设为当前接口");
+        updateConfig(modelKey, nextModel);
+        if (token) {
+            setSavingConfig(true);
+            try {
+                await syncUserModelConfig(token, nextConfig);
+                message.success("已设为当前接口并同步到账号");
+            } catch (error) {
+                message.error(error instanceof Error ? "同步失败：" + error.message : "同步失败，请稍后在右下角「完成」重试");
+            } finally {
+                setSavingConfig(false);
+            }
+        } else {
+            message.success("已设为当前接口");
+        }
     };
 
     const isChannelCurrent = (channel: LocalModelChannel) => {
@@ -259,6 +284,10 @@ export function AppConfigModal() {
                 const models = channel.models.length ? channel.models : ["doubao-seedance-2.0"];
                 patchLocalChannel(channel.id, { models });
                 message.success("Agent Plan 不提供模型列表接口；已校验配置，请使用套餐内的 Seedance 模型名称");
+                return;
+            }
+            if (apiProviderForChannel(channel) === "ark") {
+                message.info("火山 Ark 不提供模型列表接口；请直接在“启用模型”里输入模型名或 Endpoint ID");
                 return;
             }
             const availableModels = await fetchImageModels(configForLocalChannel(config, channel));
@@ -462,7 +491,7 @@ export function AppConfigModal() {
                                             </div>
                                         </div>
                                         <div className="mt-4 flex flex-wrap items-center gap-2">
-                                            <Button type="primary" onClick={() => setChannelCurrent(editingChannel)}>
+                                            <Button type="primary" loading={savingConfig} onClick={() => void setChannelCurrent(editingChannel)}>
                                                 保存并设为当前
                                             </Button>
                                             <Button onClick={() => setEditingApiId(null)}>完成</Button>
