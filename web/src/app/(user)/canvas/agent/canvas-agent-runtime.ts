@@ -69,6 +69,7 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
     let state = input.initialState;
     let allowTools = true;
     let hasExecutedActions = false;
+    let requestedActionRetry = false;
     let protocolMessages: CanvasAgentProtocolMessage[] = trimProtocolMessages([
         ...input.protocolMessages,
         { role: "user" as const, content: buildUserContent(input.userText, input.references, input.config.textModel || input.config.model) },
@@ -87,6 +88,7 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
             messages: protocolMessages,
             tools: CANVAS_AGENT_TOOLS,
             allowTools,
+            requireTool: requestedActionRetry,
             signal: input.signal,
         });
         if (turn.usedJsonFallback) allowTools = false;
@@ -99,6 +101,15 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
         if (!actions.length) {
             const reply = (parsedJson.parsed ? parsedJson.reply : turn.content).trim();
             if (!hasExecutedActions && userLikelyRequestedCanvasAction(input.userText) && !looksLikeClarifyingQuestion(reply)) {
+                if (!requestedActionRetry) {
+                    requestedActionRetry = true;
+                    protocolMessages = trimProtocolMessages([
+                        ...protocolMessages,
+                        { role: "assistant" as const, content: turn.content },
+                        { role: "user" as const, content: "请立即执行我刚才明确要求的画布操作。优先调用系统工具；若渠道不支持原生工具，只输出包含 actions 和 reply 的严格 JSON 对象，不要再次只做文字说明。" },
+                    ]);
+                    continue;
+                }
                 const unsupported = "当前文本模型没有返回可执行的画布工具指令。可以继续讨论文本内容，但无法可靠地自动创建节点或执行生成；请在全局配置中更换支持 Tool Calling 或稳定 JSON 输出的文本模型。";
                 protocolMessages = trimProtocolMessages([...protocolMessages, { role: "assistant" as const, content: unsupported }]);
                 return { reply: unsupported, state, protocolMessages: persistCanvasAgentProtocolMessages(protocolMessages) };
@@ -115,6 +126,7 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
 
         const results = await executeActions(actions, state, input.executeAction, input.signal, input.onEvent);
         hasExecutedActions = true;
+        requestedActionRetry = false;
         state = results.state;
 
         if (nativeActions.length && allowTools) {

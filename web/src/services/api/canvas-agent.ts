@@ -17,6 +17,7 @@ type RequestCanvasAgentTurnInput = {
     messages: CanvasAgentProtocolMessage[];
     tools: CanvasAgentToolDefinition[];
     allowTools: boolean;
+    requireTool?: boolean;
     signal?: AbortSignal;
 };
 
@@ -74,7 +75,7 @@ export async function requestCanvasAgentTurn(input: RequestCanvasAgentTurnInput)
 
     for (let attempt = 0; attempt < 3; attempt++) {
         try {
-            const message = await requestCompletion(requestConfig, systemPrompt, messages, tools, input.signal);
+            const message = await requestCompletion(requestConfig, systemPrompt, messages, tools, input.signal, input.requireTool === true);
             return { ...message, usedJsonFallback };
         } catch (error) {
             requestError = error;
@@ -93,7 +94,7 @@ export async function requestCanvasAgentTurn(input: RequestCanvasAgentTurnInput)
     throw requestError;
 }
 
-async function requestCompletion(config: AiConfig, systemPrompt: string, messages: CanvasAgentProtocolMessage[], tools: CanvasAgentToolDefinition[], signal?: AbortSignal) {
+async function requestCompletion(config: AiConfig, systemPrompt: string, messages: CanvasAgentProtocolMessage[], tools: CanvasAgentToolDefinition[], signal?: AbortSignal, requireTool = false) {
     const body: Record<string, unknown> = {
         model: config.model,
         messages: [{ role: "system", content: systemPrompt }, ...messages.map(toRequestMessage)],
@@ -101,7 +102,7 @@ async function requestCompletion(config: AiConfig, systemPrompt: string, message
     };
     if (tools.length) {
         body.tools = tools;
-        body.tool_choice = "auto";
+        body.tool_choice = requireTool ? "required" : "auto";
     }
 
     const response = await fetch(aiApiUrl(config, "/chat/completions"), {
