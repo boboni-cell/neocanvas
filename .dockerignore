@@ -2,6 +2,8 @@
 .idea
 docs2
 data
+!web/src/data/
+!web/src/data/skills.ts
 docs/.next
 docs/.source
 docs/node_modules

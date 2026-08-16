@@ -4,6 +4,8 @@ node_modules/
 .env*
 !.env.example
 data/
+!web/src/data/
+!web/src/data/skills.ts
 /director/
 *.log
 *.tsbuildinfo
