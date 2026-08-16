@@ -74,7 +74,7 @@ export async function atlasUploadMedia(config: AiConfig, file: File) {
     const url =
         payload?.url ||
         (data && typeof data === "string" ? data : "") ||
-        (data && typeof data === "object" ? data.url || data.media_url || data.file_url || data.link || (Array.isArray(data.outputs) ? data.outputs[0] : "") : "");
+        (data && typeof data === "object" ? data.download_url || data.url || data.media_url || data.file_url || data.link || (Array.isArray(data.outputs) ? data.outputs[0] : "") : "");
     if (!url) throw new Error(`Atlas Cloud 上传媒体失败：没有返回 URL。响应：${JSON.stringify(payload).slice(0, 300)}`);
     return url;
 }
