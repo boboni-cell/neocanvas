@@ -20,6 +20,7 @@ import remarkGfm from "remark-gfm";
 
 import { ImageGenerationPending } from "@/components/image-generation-pending";
 import { skills as builtinSkills } from "@/data/skills";
+import { builtinSkillBriefs } from "@/data/skill-briefs";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { cn } from "@/lib/utils";
 import { imageToDataUrl } from "@/services/image-storage";
@@ -142,7 +143,9 @@ export function CanvasAssistantPanel({
         if (!selectedSkillId) return "";
         if (selectedSkillId.startsWith("custom:")) return customSkills.find((skill) => `custom:${skill.id}` === selectedSkillId)?.prompt || "";
         const skill = builtinSkills.find((item) => `builtin:${item.id}` === selectedSkillId);
-        return skill ? `使用内置技能 [${skill.slug}]「${skill.name}」。${skill.description}` : "";
+        if (!skill) return "";
+        const brief = builtinSkillBriefs[skill.slug];
+        return `使用内置技能 [${skill.slug}]「${skill.name}」。\n${brief || skill.description}`;
     }, [customSkills, selectedSkillId]);
     const textChannelName = useMemo(() => {
         if (effectiveConfig.channelMode === "remote") return effectiveConfig.publicChannels.find((channel) => channel.id === effectiveConfig.textChannelId)?.name || "云端渠道";

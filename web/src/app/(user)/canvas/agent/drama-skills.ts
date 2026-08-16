@@ -1,5 +1,6 @@
 import type { CanvasAgentPhase } from "../types";
 import { skills as builtinSkillCatalog } from "@/data/skills";
+import { builtinSkillBriefs } from "@/data/skill-briefs";
 
 type BuiltinSkillRoute = {
     slug: string;
@@ -47,11 +48,16 @@ const AUTO_ROUTES: BuiltinSkillRoute[] = [
 ];
 
 const CACHE = new Map<string, string>();
-const MAX_SKILL_CHARS = 16000;
+const MAX_SKILL_CHARS = 8000;
 
 async function fetchBuiltinSkill(route: BuiltinSkillRoute): Promise<string> {
     const cached = CACHE.get(route.slug);
     if (cached !== undefined) return cached;
+    const brief = builtinSkillBriefs[route.slug];
+    if (brief) {
+        CACHE.set(route.slug, brief);
+        return brief;
+    }
     const response = await fetch(route.path, { cache: "force-cache" });
     if (!response.ok) throw new Error(String(response.status));
     const text = await response.text();
