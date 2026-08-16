@@ -736,7 +736,7 @@ async function requestImageEditSingle(config: AiConfig, prompt: string, referenc
         formData.set("partial_images", String(params.streamPartialImages));
     }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    const imageField = isAtlasCloudBaseUrl(config.baseUrl) && files.length > 1 ? "image[]" : "image";
+    const imageField = files.length > 1 ? "image[]" : "image";
     files.forEach((file) => formData.append(imageField, file));
 
     const directProvider = !usesAccountProxy(config) ? directAIProviderForConfig(config) : null;
@@ -1018,7 +1018,7 @@ async function createCanvasImageTaskRequest(config: AiConfig & { seedIndex?: num
         }
         if (params.size) formData.set("size", params.size);
         const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-        const imageField = isAtlasCloudBaseUrl(config.baseUrl) && files.length > 1 ? "image[]" : "image";
+        const imageField = files.length > 1 ? "image[]" : "image";
         files.forEach((file) => formData.append(imageField, file));
         return { method: "POST", headers: tokenHeaders, body: formData };
     }
