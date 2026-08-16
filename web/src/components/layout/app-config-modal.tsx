@@ -13,7 +13,7 @@ import { audioFormatOptions, audioVoiceOptions, normalizeAudioSpeedValue } from 
 import { isMimoPresetTtsModel, isMimoTtsModel, isMimoVoiceCloneModel, isMimoVoiceDesignModel, mimoTtsFormatOptions, mimoTtsVoiceOptions } from "@/lib/mimo-tts";
 import { API_PROVIDERS, apiProviderForChannel, apiProviderLabel } from "@/constant/api-providers";
 import { cn } from "@/lib/utils";
-import { filterModelsByCapability, normalizeLocalChannels, useConfigStore, useEffectiveConfig, type AiConfig, type LocalModelChannel, type ModelCapability } from "@/stores/use-config-store";
+import { normalizeLocalChannels, useConfigStore, useEffectiveConfig, type AiConfig, type LocalModelChannel, type ModelCapability } from "@/stores/use-config-store";
 import { useUserStore } from "@/stores/use-user-store";
 
 type ModelGroup = {
@@ -165,32 +165,14 @@ export function AppConfigModal() {
         }
     };
 
-    const refreshModels = async () => {
-        if (effectiveMode === "remote") return;
-        const channels = normalizeLocalChannels(config);
-        if (channels.some((channel) => !channel.baseUrl.trim() || !channel.apiKey.trim())) {
-            message.error("请先填写所有本地渠道的 Base URL 和 API Key");
-            return;
-        }
-        setLoadingModels(true);
-        try {
-            const nextChannels = await Promise.all(channels.map(async (channel) => ({ ...channel, models: await fetchImageModels(configForLocalChannel(config, channel)) })));
-            updateLocalChannels(nextChannels);
-            message.success("模型列表已更新");
-        } catch (error) {
-            message.error(error instanceof Error ? error.message : "读取模型失败");
-        } finally {
-            setLoadingModels(false);
-        }
-    };
-
     const updateLocalChannels = (channels: LocalModelChannel[]) => {
         const normalized = channels.length ? channels : normalizeLocalChannels({ baseUrl: config.baseUrl, apiKey: config.apiKey, models: config.models });
         const models = uniqueModels(normalized.flatMap((channel) => channel.models));
-        const nextImageModels = filterModelsByCapability(models, "image");
-        const nextVideoModels = filterModelsByCapability(models, "video");
-        const nextTextModels = filterModelsByCapability(models, "text");
-        const nextAudioModels = filterModelsByCapability(models, "audio");
+        const modelsForCapability = (capability: ModelCapability) => uniqueModels(normalized.filter((channel) => (channel.capability || "text") === capability).flatMap((channel) => channel.models));
+        const nextImageModels = modelsForCapability("image");
+        const nextVideoModels = modelsForCapability("video");
+        const nextTextModels = modelsForCapability("text");
+        const nextAudioModels = modelsForCapability("audio");
         const imageModel = nextImageModels.includes(config.imageModel) ? config.imageModel : nextImageModels[0] || "";
         const videoModel = nextVideoModels.includes(config.videoModel) ? config.videoModel : nextVideoModels[0] || "";
         const textModel = nextTextModels.includes(config.textModel) ? config.textModel : nextTextModels[0] || "";
@@ -278,8 +260,10 @@ export function AppConfigModal() {
                 message.success("Agent Plan 不提供模型列表接口；已校验配置，请使用套餐内的 Seedance 模型名称");
                 return;
             }
-            patchLocalChannel(channel.id, { models: await fetchImageModels(configForLocalChannel(config, channel)) });
-            message.success("模型列表已更新");
+            const availableModels = await fetchImageModels(configForLocalChannel(config, channel));
+            const models = channel.models.filter((model) => availableModels.includes(model));
+            patchLocalChannel(channel.id, { availableModels, models });
+            message.success(`已拉取 ${availableModels.length} 个模型，请选择需要启用的模型`);
         } catch (error) {
             message.error(error instanceof Error ? error.message : "读取模型失败");
         } finally {
@@ -440,8 +424,16 @@ export function AppConfigModal() {
                                                 <Input.Password value={editingChannel.apiKey} placeholder={editingChannel.apiKey ? "已保存，留空不修改" : "请输入 API Key"} onChange={(event) => patchLocalChannel(editingChannel.id, { apiKey: event.target.value })} />
                                             </label>
                                             <label className="grid gap-1 text-xs text-stone-500 dark:text-stone-400">
-                                                模型名称（多个用逗号分隔）
-                                                <Input value={editingChannel.models.join(", ")} placeholder="例如：gpt-4o, gpt-image-1" onChange={(event) => patchLocalChannel(editingChannel.id, { models: event.target.value.split(",").map((model) => model.trim()).filter(Boolean) })} />
+                                                启用模型（可多选，也可输入模型名称）
+                                                <Select
+                                                    mode="tags"
+                                                    showSearch
+                                                    value={editingChannel.models}
+                                                    options={uniqueModels([...(editingChannel.availableModels || []), ...editingChannel.models]).map((model) => ({ label: model, value: model }))}
+                                                    placeholder="先拉取模型，再选择需要启用的模型"
+                                                    maxTagCount="responsive"
+                                                    onChange={(models) => patchLocalChannel(editingChannel.id, { models })}
+                                                />
                                             </label>
                                             <div className="flex items-end gap-2">
                                                 <Button loading={loadingModels} onClick={() => void refreshLocalChannelModels(editingChannel)}>

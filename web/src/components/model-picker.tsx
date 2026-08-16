@@ -26,9 +26,11 @@ export function ModelPicker({ config, value, channelId, capability, onChange, cl
         const channels =
             config.channelMode === "remote"
                 ? config.publicChannels.map((channel) => ({ id: channel.id, name: channel.name || "云端渠道", baseUrl: channel.baseUrl, models: channel.models }))
-                : normalizeLocalChannels(config).map((channel) => ({ id: channel.id, name: channel.name || "本地渠道", baseUrl: channel.baseUrl, models: channel.models }));
+                : normalizeLocalChannels(config)
+                    .filter((channel) => !capability || (channel.capability || "text") === capability)
+                    .map((channel) => ({ id: channel.id, name: channel.name || "本地渠道", baseUrl: channel.baseUrl, models: channel.models }));
         const models = channels.flatMap((channel) => (channel.models ?? []).map((model) => ({ key: `${channel.id}::${model}`, channelId: channel.id, channelName: channel.name, model })));
-        if (!capability) return models;
+        if (!capability || config.channelMode === "local") return models;
         return models.filter((item) => filterModelsByCapability([item.model], capability).length > 0);
     }, [capability, config]);
     const currentOption = useMemo(() => {

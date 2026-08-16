@@ -40,6 +40,7 @@ export type RunCanvasAgentInput = {
     initialState: CanvasAgentState;
     protocolMessages: CanvasAgentProtocolMessage[];
     userText: string;
+    skillPrompt?: string;
     references: CanvasAssistantReference[];
     getContext: (state: CanvasAgentState) => CanvasAgentContext;
     executeAction: (action: CanvasAgentAction) => Promise<CanvasAgentToolResult>;
@@ -79,9 +80,10 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
         const context = input.getContext(state);
         const builtinPrompt = buildCanvasAgentSkillPrompt(state.phase, input.userText, context);
         const dramaPrompt = await buildDramaSkillPrompt(state.phase, input.userText);
+        const systemPrompt = input.skillPrompt ? builtinPrompt + "\n\n当前启用的 Skill：\n" + input.skillPrompt : builtinPrompt;
         const turn = await requestCanvasAgentTurn({
             config: input.config,
-            systemPrompt: dramaPrompt ? builtinPrompt + "\n\n" + dramaPrompt : builtinPrompt,
+            systemPrompt: dramaPrompt ? systemPrompt + "\n\n" + dramaPrompt : systemPrompt,
             messages: protocolMessages,
             tools: CANVAS_AGENT_TOOLS,
             allowTools,

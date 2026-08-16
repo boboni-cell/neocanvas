@@ -12,18 +12,20 @@ import {
     Video,
     X,
 } from "lucide-react";
-import { Button, Modal, Tooltip } from "antd";
+import { Button, Modal, Select, Tooltip } from "antd";
 import { motion } from "motion/react";
 import { nanoid } from "nanoid";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import { ImageGenerationPending } from "@/components/image-generation-pending";
+import { skills as builtinSkills } from "@/data/skills";
 import { canvasThemes } from "@/lib/canvas-theme";
 import { cn } from "@/lib/utils";
 import { imageToDataUrl } from "@/services/image-storage";
 import { useAssetStore } from "@/stores/use-asset-store";
 import { useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
+import { useSkillStore } from "@/stores/use-skill-store";
 import { useThemeStore } from "@/stores/use-theme-store";
 import { createCanvasAgentState, runCanvasAgent } from "../agent/canvas-agent-runtime";
 import type { CanvasAgentContext } from "../agent/canvas-agent-context";
@@ -95,12 +97,14 @@ export function CanvasAssistantPanel({
     const effectiveConfig = useEffectiveConfig();
     const isAiConfigReady = useConfigStore((state) => state.isAiConfigReady);
     const cleanupImages = useAssetStore((state) => state.cleanupImages);
+    const customSkills = useSkillStore((state) => state.skills);
     const abortRef = useRef<AbortController | null>(null);
     const consumedInitialRequestRef = useRef<typeof initialRequest>(null);
     const pendingDeleteRef = useRef<PendingDeleteConfirmation | null>(null);
     const messageListRef = useRef<HTMLDivElement>(null);
     const [view, setView] = useState<"chat" | "history">("chat");
     const [prompt, setPrompt] = useState("");
+    const [selectedSkillId, setSelectedSkillId] = useState<string>();
     const [isRunning, setIsRunning] = useState(false);
     const [checkedChatIds, setCheckedChatIds] = useState<string[]>([]);
     const [deleteChatIds, setDeleteChatIds] = useState<string[]>([]);
@@ -130,6 +134,20 @@ export function CanvasAssistantPanel({
     const messages = activeSession?.messages || [];
     const hasMessages = messages.length > 0;
     const selectedNodeKey = useMemo(() => Array.from(selectedNodeIds).sort().join(","), [selectedNodeIds]);
+    const skillOptions = useMemo(() => [
+        ...customSkills.map((skill) => ({ value: `custom:${skill.id}`, label: skill.name })),
+        ...builtinSkills.filter((skill) => skill.status === "ready").map((skill) => ({ value: `builtin:${skill.id}`, label: skill.name })),
+    ], [customSkills]);
+    const selectedSkillPrompt = useMemo(() => {
+        if (!selectedSkillId) return "";
+        if (selectedSkillId.startsWith("custom:")) return customSkills.find((skill) => `custom:${skill.id}` === selectedSkillId)?.prompt || "";
+        const skill = builtinSkills.find((item) => `builtin:${item.id}` === selectedSkillId);
+        return skill ? `使用内置技能 [${skill.slug}]「${skill.name}」。${skill.description}` : "";
+    }, [customSkills, selectedSkillId]);
+    const textChannelName = useMemo(() => {
+        if (effectiveConfig.channelMode === "remote") return effectiveConfig.publicChannels.find((channel) => channel.id === effectiveConfig.textChannelId)?.name || "云端渠道";
+        return effectiveConfig.localChannels.find((channel) => channel.id === effectiveConfig.textChannelId)?.name || "本地渠道";
+    }, [effectiveConfig]);
 
     useEffect(() => {
         if (view !== "chat") return;
@@ -258,6 +276,7 @@ export function CanvasAssistantPanel({
                 initialState: session.agentState,
                 protocolMessages: session.protocolMessages,
                 userText: text,
+                skillPrompt: selectedSkillPrompt,
                 references: modelReferences,
                 getContext: getAgentContext,
                 executeAction: async (action) => {
@@ -439,6 +458,20 @@ export function CanvasAssistantPanel({
                                 </div>
                             </div>
                         ) : null}
+                        <div className="mx-3 mb-2 grid gap-2">
+                            <Select
+                                allowClear
+                                showSearch
+                                value={selectedSkillId}
+                                options={skillOptions}
+                                placeholder="选择 Skill（已同步技能库）"
+                                optionFilterProp="label"
+                                onChange={setSelectedSkillId}
+                            />
+                            <div className="truncate px-1 text-xs opacity-50" title={`${textChannelName} · ${effectiveConfig.textModel || effectiveConfig.model}`}>
+                                Agent 模型：{effectiveConfig.textModel || effectiveConfig.model || "未配置"} · {textChannelName}
+                            </div>
+                        </div>
                         <CanvasAssistantComposer
                             prompt={prompt}
                             isRunning={isRunning}

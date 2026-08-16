@@ -15,6 +15,7 @@ export type LocalModelChannel = {
     baseUrl: string;
     apiKey: string;
     models: string[];
+    availableModels?: string[];
     capability?: ModelCapability;
 };
 
@@ -456,6 +457,7 @@ export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelCha
     const channels = Array.isArray(config.localChannels) ? config.localChannels : [];
     const normalized: LocalModelChannel[] = channels.map((channel, index) => {
         const models = Array.isArray(channel.models) ? channel.models.filter(Boolean) : [];
+        const availableModels = Array.isArray(channel.availableModels) ? channel.availableModels.filter(Boolean) : undefined;
         const capability = channel.capability || inferChannelCapability(models);
         const baseUrl = channel.baseUrl || "";
         const legacyArkSeedance = capability === "video" && models.some((model) => isVideoModelName(model)) && baseUrl.replace(/\/+$/, "") === "https://ark.cn-beijing.volces.com/api/v3";
@@ -466,6 +468,7 @@ export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelCha
             baseUrl: legacyArkSeedance ? "https://ark.cn-beijing.volces.com/api/plan/v3" : baseUrl,
             apiKey: channel.apiKey || "",
             models,
+            availableModels,
             capability,
         };
     });
