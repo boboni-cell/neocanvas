@@ -736,7 +736,8 @@ async function requestImageEditSingle(config: AiConfig, prompt: string, referenc
         formData.set("partial_images", String(params.streamPartialImages));
     }
     const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-    files.forEach((file) => formData.append("image", file));
+    const imageField = isAtlasCloudBaseUrl(config.baseUrl) && files.length > 1 ? "image[]" : "image";
+    files.forEach((file) => formData.append(imageField, file));
 
     const directProvider = !usesAccountProxy(config) ? directAIProviderForConfig(config) : null;
     if (directProvider) {
@@ -1017,7 +1018,8 @@ async function createCanvasImageTaskRequest(config: AiConfig & { seedIndex?: num
         }
         if (params.size) formData.set("size", params.size);
         const files = await Promise.all(references.map(async (image) => dataUrlToFile({ ...image, dataUrl: await imageToDataUrl(image) })));
-        files.forEach((file) => formData.append("image", file));
+        const imageField = isAtlasCloudBaseUrl(config.baseUrl) && files.length > 1 ? "image[]" : "image";
+        files.forEach((file) => formData.append(imageField, file));
         return { method: "POST", headers: tokenHeaders, body: formData };
     }
     if (isAgnesImageModel(config.model)) {
@@ -1123,7 +1125,7 @@ export async function fetchImageModels(config: AiConfig) {
             },
             timeout: IMAGE_REQUEST_TIMEOUT_SECONDS * 1000,
         });
-        const atlasCloud = /(?:^|\.)atlascloud\.ai$/i.test(new URL(config.baseUrl).hostname);
+        const atlasCloud = isAtlasCloudBaseUrl(config.baseUrl);
         const capability = channel?.capability || "text";
         const models = (response.data.data || [])
             .filter((item) => !atlasCloud || !item.type || item.type.toLowerCase() === capability)
@@ -1134,6 +1136,14 @@ export async function fetchImageModels(config: AiConfig) {
         return models;
     } catch (error) {
         throw new Error(readAxiosError(error, "读取模型失败"));
+    }
+}
+
+function isAtlasCloudBaseUrl(baseUrl: string) {
+    try {
+        return /(?:^|\.)atlascloud\.ai$/i.test(new URL(baseUrl).hostname);
+    } catch {
+        return false;
     }
 }
 function isAgnesImageModel(model: string) {
