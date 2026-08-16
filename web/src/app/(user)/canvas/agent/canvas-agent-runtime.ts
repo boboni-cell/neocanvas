@@ -14,6 +14,7 @@ import {
     CANVAS_AGENT_TOOLS,
     canvasAgentActionLabel,
     isCanvasAgentMediaAction,
+    looksLikeCanvasActionJson,
     normalizeCanvasAgentAction,
     parseCanvasAgentJson,
     userLikelyRequestedCanvasAction,
@@ -100,7 +101,8 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
 
         if (!actions.length) {
             const reply = (parsedJson.parsed ? parsedJson.reply : turn.content).trim();
-            if (!hasExecutedActions && userLikelyRequestedCanvasAction(input.userText) && !looksLikeClarifyingQuestion(reply)) {
+            const invalidActionJson = !parsedJson.parsed && looksLikeCanvasActionJson(turn.content);
+            if (!hasExecutedActions && userLikelyRequestedCanvasAction(input.userText) && (invalidActionJson || !looksLikeClarifyingQuestion(reply))) {
                 if (!requestedActionRetry) {
                     requestedActionRetry = true;
                     protocolMessages = trimProtocolMessages([
@@ -110,7 +112,9 @@ export async function runCanvasAgent(input: RunCanvasAgentInput): Promise<RunCan
                     ]);
                     continue;
                 }
-                const unsupported = "当前文本模型没有返回可执行的画布工具指令。可以继续讨论文本内容，但无法可靠地自动创建节点或执行生成；请在全局配置中更换支持 Tool Calling 或稳定 JSON 输出的文本模型。";
+                const unsupported = invalidActionJson
+                    ? "当前文本模型返回了无法解析的画布动作，已阻止内部 JSON 显示和错误执行。请重试一次；如果仍失败，请更换支持 Tool Calling 的文本模型。"
+                    : "当前文本模型没有返回可执行的画布工具指令。可以继续讨论文本内容，但无法可靠地自动创建节点或执行生成；请在全局配置中更换支持 Tool Calling 或稳定 JSON 输出的文本模型。";
                 protocolMessages = trimProtocolMessages([...protocolMessages, { role: "assistant" as const, content: unsupported }]);
                 return { reply: unsupported, state, protocolMessages: persistCanvasAgentProtocolMessages(protocolMessages) };
             }

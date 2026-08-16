@@ -287,13 +287,45 @@ export function parseCanvasAgentJson(content: string): ParsedCanvasAgentJson {
     const json = extractJsonObject(content);
     if (!json) return { parsed: false, actions: [], reply: content.trim() };
     try {
-        const payload = JSON.parse(json) as { actions?: Array<{ id?: string; tool?: string; name?: string; arguments?: unknown }>; reply?: unknown };
+        const payload = parseJsonWithControlCharacterRepair(json) as { actions?: Array<{ id?: string; tool?: string; name?: string; arguments?: unknown }>; reply?: unknown };
         if (!Array.isArray(payload.actions)) return { parsed: false, actions: [], reply: content.trim() };
         const actions = payload.actions.slice(0, 12).map((item) => normalizeCanvasAgentAction(item.tool || item.name, item.arguments, item.id || nanoid()));
         return { parsed: true, actions, reply: typeof payload.reply === "string" ? payload.reply.trim() : "" };
     } catch {
         return { parsed: false, actions: [], reply: content.trim() };
     }
+}
+
+function parseJsonWithControlCharacterRepair(json: string) {
+    try {
+        return JSON.parse(json);
+    } catch {
+        let repaired = "";
+        let inString = false;
+        let escaped = false;
+        for (const character of json) {
+            if (escaped) {
+                repaired += character;
+                escaped = false;
+                continue;
+            }
+            if (character === "\\" && inString) {
+                repaired += character;
+                escaped = true;
+                continue;
+            }
+            if (character === '"') inString = !inString;
+            if (inString && character === "\n") repaired += "\\n";
+            else if (inString && character === "\r") repaired += "\\r";
+            else if (inString && character === "\t") repaired += "\\t";
+            else repaired += character;
+        }
+        return JSON.parse(repaired);
+    }
+}
+
+export function looksLikeCanvasActionJson(content: string) {
+    return /^\s*(?:```(?:json)?\s*)?\{[\s\S]*["']actions["']\s*:/i.test(content);
 }
 
 export function canvasAgentActionLabel(action: CanvasAgentAction) {
