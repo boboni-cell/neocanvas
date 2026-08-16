@@ -299,6 +299,9 @@ func pollVideoTaskFromUpstream(task model.VideoTask) (service.VideoTaskPollUpdat
 }
 
 func normalizeVideoCreateBody(body []byte, contentType string, modelName string, channel model.ModelChannel, upstreamPath string) ([]byte, string, error) {
+	if isArkSeedanceVideo(channel.BaseURL, modelName) && upstreamPath == "/contents/generations/tasks" {
+		return normalizeArkAgentPlanVideoBody(body, contentType)
+	}
 	if isKIEChannel(channel, modelName) && upstreamPath == "/jobs/createTask" {
 		return normalizeKIEVideoBody(body, contentType, modelName, channel)
 	}

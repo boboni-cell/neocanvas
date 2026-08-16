@@ -205,10 +205,10 @@ export function AppConfigModal() {
         updateConfig("videoModel", videoModel);
         updateConfig("textModel", textModel);
         updateConfig("audioModel", audioModel);
-        updateConfig("imageChannelId", channelIdForLocalModel(normalized, imageModel, config.imageChannelId));
-        updateConfig("videoChannelId", channelIdForLocalModel(normalized, videoModel, config.videoChannelId));
-        updateConfig("textChannelId", channelIdForLocalModel(normalized, textModel, config.textChannelId));
-        updateConfig("audioChannelId", channelIdForLocalModel(normalized, audioModel, config.audioChannelId));
+        updateConfig("imageChannelId", channelIdForLocalModel(normalized, imageModel, config.imageChannelId, "image"));
+        updateConfig("videoChannelId", channelIdForLocalModel(normalized, videoModel, config.videoChannelId, "video"));
+        updateConfig("textChannelId", channelIdForLocalModel(normalized, textModel, config.textChannelId, "text"));
+        updateConfig("audioChannelId", channelIdForLocalModel(normalized, audioModel, config.audioChannelId, "audio"));
         updateConfig("baseUrl", normalized[0]?.baseUrl || config.baseUrl);
         updateConfig("apiKey", normalized[0]?.apiKey || config.apiKey);
     };
@@ -234,7 +234,7 @@ export function AppConfigModal() {
             name: keepName ? current?.name || provider.label : provider.label,
             protocol: provider.protocol,
             baseUrl: provider.baseUrl,
-            capability: provider.capability,
+            capability: provider.id === "custom" ? current?.capability || apiTab : provider.capability,
             models: provider.defaultModel ? [provider.defaultModel] : current?.models || [],
         });
     };
@@ -272,6 +272,12 @@ export function AppConfigModal() {
         }
         setLoadingModels(true);
         try {
+            if (apiProviderForChannel(channel) === "ark-plan") {
+                const models = channel.models.length ? channel.models : ["doubao-seedance-2.0"];
+                patchLocalChannel(channel.id, { models });
+                message.success("Agent Plan 不提供模型列表接口；已校验配置，请使用套餐内的 Seedance 模型名称");
+                return;
+            }
             patchLocalChannel(channel.id, { models: await fetchImageModels(configForLocalChannel(config, channel)) });
             message.success("模型列表已更新");
         } catch (error) {
@@ -414,7 +420,7 @@ export function AppConfigModal() {
                                                     showSearch
                                                     optionFilterProp="label"
                                                     value={apiProviderForChannel(editingChannel)}
-                                                    options={API_PROVIDERS.map((item) => ({ label: item.label, value: item.id }))}
+                                                    options={API_PROVIDERS.filter((item) => item.id === "custom" || item.capability === (editingChannel.capability || apiTab)).map((item) => ({ label: item.label, value: item.id }))}
                                                     onChange={(id) => applyProvider(editingChannel.id, id)}
                                                 />
                                             </label>
@@ -439,7 +445,7 @@ export function AppConfigModal() {
                                             </label>
                                             <div className="flex items-end gap-2">
                                                 <Button loading={loadingModels} onClick={() => void refreshLocalChannelModels(editingChannel)}>
-                                                    测试连接 / 拉取模型
+                                                    {apiProviderForChannel(editingChannel) === "ark-plan" ? "校验 Agent Plan 配置" : "测试连接 / 拉取模型"}
                                                 </Button>
                                             </div>
                                         </div>
@@ -620,10 +626,11 @@ function configForLocalChannel(config: AiConfig, channel: LocalModelChannel): Ai
     };
 }
 
-function channelIdForLocalModel(channels: LocalModelChannel[], model: string, currentId: string) {
-    if (!channels.length) return "";
-    if (channels.some((channel) => channel.id === currentId && (!model || channel.models.includes(model)))) return currentId;
-    return channels.find((channel) => model && channel.models.includes(model))?.id || channels[0].id;
+function channelIdForLocalModel(channels: LocalModelChannel[], model: string, currentId: string, capability: ModelCapability) {
+    const candidates = channels.filter((channel) => (channel.capability || "text") === capability);
+    if (!candidates.length) return "";
+    if (candidates.some((channel) => channel.id === currentId && (!model || channel.models.includes(model)))) return currentId;
+    return candidates.find((channel) => model && channel.models.includes(model))?.id || candidates[0].id;
 }
 
 function normalizeImageCount(value: string) {
