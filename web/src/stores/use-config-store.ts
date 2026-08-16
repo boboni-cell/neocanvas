@@ -454,15 +454,21 @@ function normalizeArkPlanBaseUrl(baseUrl: string) {
 
 export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelChannel[] {
     const channels = Array.isArray(config.localChannels) ? config.localChannels : [];
-    const normalized: LocalModelChannel[] = channels.map((channel, index) => ({
-        id: channel.id || `local-${index + 1}`,
-        protocol: channel.protocol === "kie" || channel.protocol === "mimo" ? channel.protocol : "openai",
-        name: typeof channel.name === "string" ? channel.name : `本地渠道 ${index + 1}`,
-        baseUrl: channel.baseUrl || "",
-        apiKey: channel.apiKey || "",
-        models: Array.isArray(channel.models) ? channel.models.filter(Boolean) : [],
-        capability: channel.capability || inferChannelCapability(channel.models),
-    }));
+    const normalized: LocalModelChannel[] = channels.map((channel, index) => {
+        const models = Array.isArray(channel.models) ? channel.models.filter(Boolean) : [];
+        const capability = channel.capability || inferChannelCapability(models);
+        const baseUrl = channel.baseUrl || "";
+        const legacyArkSeedance = capability === "video" && models.some((model) => isVideoModelName(model)) && baseUrl.replace(/\/+$/, "") === "https://ark.cn-beijing.volces.com/api/v3";
+        return {
+            id: channel.id || `local-${index + 1}`,
+            protocol: channel.protocol === "kie" || channel.protocol === "mimo" ? channel.protocol : "openai",
+            name: legacyArkSeedance && channel.name === "火山 Ark" ? "火山方舟 Agent Plan（视频）" : typeof channel.name === "string" ? channel.name : `本地渠道 ${index + 1}`,
+            baseUrl: legacyArkSeedance ? "https://ark.cn-beijing.volces.com/api/plan/v3" : baseUrl,
+            apiKey: channel.apiKey || "",
+            models,
+            capability,
+        };
+    });
     if (!normalized.length) {
         normalized.push({ id: "local-default", protocol: "openai", name: "本地直连", baseUrl: config.baseUrl || defaultConfig.baseUrl, apiKey: config.apiKey || "", models: Array.isArray(config.models) ? config.models.filter(Boolean) : [] });
     }
