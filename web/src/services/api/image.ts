@@ -1139,6 +1139,32 @@ export async function fetchImageModels(config: AiConfig) {
     }
 }
 
+export async function testImageConnection(config: AiConfig) {
+    if (config.channelMode === "remote") return;
+    try {
+        const response = await axios.get(buildApiUrl(config.baseUrl, "/models"), {
+            headers: { Authorization: `Bearer ${config.apiKey}` },
+            timeout: IMAGE_REQUEST_TIMEOUT_SECONDS * 1000,
+            validateStatus: () => true,
+        });
+        if (response.status >= 200 && response.status < 300) return;
+        if (response.status === 404 && isArkBaseUrl(config.baseUrl)) return;
+        const payload = response.data as { error?: { message?: string }; message?: string } | undefined;
+        const message = payload?.error?.message || payload?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+    } catch (error) {
+        throw new Error(readAxiosError(error, "连接测试失败"));
+    }
+}
+
+function isArkBaseUrl(baseUrl: string) {
+    try {
+        return /(?:^|\.)(?:volces\.com|bytepluses\.com)$/i.test(new URL(baseUrl).hostname);
+    } catch {
+        return false;
+    }
+}
+
 function isAtlasCloudBaseUrl(baseUrl: string) {
     try {
         return /(?:^|\.)atlascloud\.ai$/i.test(new URL(baseUrl).hostname);

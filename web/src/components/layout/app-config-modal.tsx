@@ -5,7 +5,7 @@ import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { ModelPicker } from "@/components/model-picker";
-import { fetchImageModels } from "@/services/api/image";
+import { fetchImageModels, testImageConnection } from "@/services/api/image";
 import { fetchUserConfig, measureUserStorageProvider, syncUserModelConfig, syncUserStorageProvider } from "@/services/api/user-config";
 import { clearStorageConfigCache as clearFileStorageCache } from "@/services/file-storage";
 import { clearStorageConfigCache as clearImageStorageCache, defaultUserStorageProvider, defaultUserWebDAVStorageProvider, loadStorageConfig, loadUserS3StorageProvider, loadUserWebDAVStorageProvider, saveUserStorageProvider, saveUserWebDAVStorageProvider, type UserStorageProvider } from "@/services/image-storage";
@@ -42,6 +42,7 @@ const API_TABS: { key: ModelCapability; label: string }[] = [
 export function AppConfigModal() {
     const { message } = App.useApp();
     const [loadingModels, setLoadingModels] = useState(false);
+    const [testingConnection, setTestingConnection] = useState(false);
     const [savingConfig, setSavingConfig] = useState(false);
     const [apiTab, setApiTab] = useState<ModelCapability>("text");
     const [editingApiId, setEditingApiId] = useState<string | null>(null);
@@ -271,6 +272,22 @@ export function AppConfigModal() {
         }
     };
 
+    const testLocalChannelConnection = async (channel: LocalModelChannel) => {
+        if (!channel.baseUrl.trim() || !channel.apiKey.trim()) {
+            message.error("请先填写该渠道的 Base URL 和 API Key");
+            return;
+        }
+        setTestingConnection(true);
+        try {
+            await testImageConnection(configForLocalChannel(config, channel));
+            message.success("连接成功");
+        } catch (error) {
+            message.error(error instanceof Error ? error.message : "连接测试失败");
+        } finally {
+            setTestingConnection(false);
+        }
+    };
+
 
     const measureStorage = async (provider: UserStorageProvider) => {
         if (!token) {
@@ -436,8 +453,11 @@ export function AppConfigModal() {
                                                 />
                                             </label>
                                             <div className="flex items-end gap-2">
+                                                <Button loading={testingConnection} onClick={() => void testLocalChannelConnection(editingChannel)}>
+                                                    测试连接
+                                                </Button>
                                                 <Button loading={loadingModels} onClick={() => void refreshLocalChannelModels(editingChannel)}>
-                                                    {apiProviderForChannel(editingChannel) === "ark-plan" ? "校验 Agent Plan 配置" : "测试连接 / 拉取模型"}
+                                                    {apiProviderForChannel(editingChannel) === "ark-plan" ? "校验 Agent Plan 配置" : "拉取模型"}
                                                 </Button>
                                             </div>
                                         </div>
