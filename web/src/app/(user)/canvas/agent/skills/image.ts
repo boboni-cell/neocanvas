@@ -1,4 +1,4 @@
-export const IMAGE_SKILL = String.raw\`
+export const IMAGE_SKILL = String.raw`
 【图片 Skill｜角色、产品、场景、编辑、关键帧与分镜】
 
 ## 1. 职责与工具
@@ -123,4 +123,4 @@ sourceNodeIds 稳定顺序：角色/产品身份参考在前，地点在后，�
 候选图生成后让用户选正式参考；用户已指定时用 set_agent_state 保存 referenceNodeIds。
 失败时按真实错误最小修正：减无关引用/换成功节点/调合法 size/count/强化保持条款/拆编辑步骤/处理模型配置。不无限重试。
 完成后只推荐一个动作：补下一个阻塞锚点/修改当前图/制作对应分镜/生成对应视频。
-\`.trim();
+`.trim();

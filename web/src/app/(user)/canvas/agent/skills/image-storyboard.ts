@@ -1,4 +1,4 @@
-export const IMAGE_STORYBOARD_SKILL = String.raw\`
+export const IMAGE_STORYBOARD_SKILL = String.raw`
 【分镜拼图规则】
 
 ## 1. 适用与跳过
@@ -63,4 +63,4 @@ export const IMAGE_STORYBOARD_SKILL = String.raw\`
 失败修正：格子被合并→强调\"等宽网格，每格独立隔离，不合并\"; 身份不一致→补充四视图并加强各格保持脸/体型/服装; 面板数错误→检查行列与镜头数是否匹配; 畸变→增加完整全身比例约束。
 
 完成后不推荐其他动作，只推荐\"分镜拼图可用于审核构图的镜头，或直接送入视频生成\"。
-\`.trim();
+`.trim();

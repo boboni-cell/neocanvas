@@ -1,4 +1,4 @@
-export const ORGANIZE_SKILL = String.raw\`
+export const ORGANIZE_SKILL = String.raw`
 【分组与画布整理 Skill】
 
 ## 1. 分组原则
@@ -75,4 +75,4 @@ arrange_nodes：使用项目现有网格算法整理指定节点或顶层节点�
 ## 12. 禁止事项
 
 不因节点多就自动分组；不把生成顺序当语义；不创建嵌套组；不让节点属两个组；不发明坐标/尺寸/颜色/frameId/任意分组字段；不承诺做不到的精细成员迁移；不在未获用户明确删除意图时删除旧组/节点/连线；不把普通整理说成创作阶段推进。
-\`.trim();
+`.trim();

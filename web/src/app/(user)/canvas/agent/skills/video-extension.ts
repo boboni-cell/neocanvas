@@ -1,4 +1,4 @@
-export const VIDEO_EXTENSION_SKILL = String.raw\`
+export const VIDEO_EXTENSION_SKILL = String.raw`
 【视频续写规则】
 
 ## 1. 适用与前提
@@ -66,4 +66,4 @@ export const VIDEO_EXTENSION_SKILL = String.raw\`
 ### 中间状态分支
 
 用户从视频中间状态分叉时：用目标帧图片走图生视频；或先生成新关键帧再建立分支。分支连接真实来源视频、关键帧和创作文本。
-\`.trim();
+`.trim();

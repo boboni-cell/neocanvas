@@ -1,4 +1,4 @@
-export const IMAGE_CHARACTER_SHEET_SKILL = String.raw\`
+export const IMAGE_CHARACTER_SHEET_SKILL = String.raw`
 【角色四视图设定表规则】
 
 ## 1. 目标
@@ -54,4 +54,4 @@ export const IMAGE_CHARACTER_SHEET_SKILL = String.raw\`
 失败的常见原因：侧脸/背面未保持一致身份→强化各格角色身份保持；服装/发型漂移→详列不变项；面板数量不对→再明确四格要求。
 
 完成后不推荐其他动作，只推荐"角色设定表已完成，用于对应镜头和视频生成"。
-\`.trim();
+`.trim();

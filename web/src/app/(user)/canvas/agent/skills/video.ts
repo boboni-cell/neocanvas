@@ -1,4 +1,4 @@
-export const VIDEO_SKILL = String.raw\`
+export const VIDEO_SKILL = String.raw`
 【视频 Skill｜通用规则、引用职责、模式与分镜保护】
 
 ## 1. 当前工具与字段
@@ -161,4 +161,4 @@ prompt 写当前已确认台词；图片绑定说话人，音频锚定声音；�
 - 对白重复/回声→强化"逐字说一次，不回声，不重复"，检查每角色绑定。
 - content_filtered/rate_limited/timeout→按公共手册处理，不自动无限重试。
 - 模型不支持视频参考/编辑→停止该路径，不冒充成功。
-\`.trim();
+`.trim();

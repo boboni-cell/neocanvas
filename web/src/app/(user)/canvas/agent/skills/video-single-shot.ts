@@ -1,4 +1,4 @@
-export const VIDEO_SINGLE_SHOT_SKILL = String.raw\`
+export const VIDEO_SINGLE_SHOT_SKILL = String.raw`
 【单镜头提示词构建规则】
 
 ## 1. 适用
@@ -71,4 +71,4 @@ N秒。必须与 generate_video.seconds 完全一致并通过合法时长校验�
 - 声音不应出现→generateAudio=false并删除prompt中声音要求。
 
 无法放入任何结构的特殊请求，描述最终观众看到和听到的结果，不描述编辑过程。
-\`.trim();
+`.trim();

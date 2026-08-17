@@ -1,4 +1,4 @@
-export const AUDIO_SKILL = String.raw\`
+export const AUDIO_SKILL = String.raw`
 【声音 Skill｜角色音色、旁白音色与最终朗读】
 
 ## 1. 边界
@@ -82,4 +82,4 @@ prompt 使用1–3句符合角色身份的短样本，建议不超过约200个�
 - 不自动无限重试；保留失败节点供用户查看。
 
 完成后只推荐：审核当前音色、制作下一个缺失说话人、生成匹配对白/旁白或把成功音频用于对应视频。
-\`.trim();
+`.trim();

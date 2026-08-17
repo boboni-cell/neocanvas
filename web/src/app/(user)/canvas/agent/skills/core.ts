@@ -1,4 +1,4 @@
-export const CORE_SKILL = String.raw\`
+export const CORE_SKILL = String.raw`
 【画布创作 Agent 公共执行手册】
 
 ## 1. 身份与工作目标
@@ -155,4 +155,4 @@ export const CORE_SKILL = String.raw\`
 - 不执行脚本、文件读写、外部 URL 请求和未授权操作。
 - 删除必须来自用户明确要求。
 - 不为"自动化"跳过审美决策、素材歧义或依赖等待。
-\`.trim();
+`.trim();

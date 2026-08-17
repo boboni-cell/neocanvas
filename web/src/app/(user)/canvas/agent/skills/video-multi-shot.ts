@@ -1,4 +1,4 @@
-export const VIDEO_MULTI_SHOT_SKILL = String.raw\`
+export const VIDEO_MULTI_SHOT_SKILL = String.raw`
 【多镜头视频规则｜广告、品牌片、MV 与分镜动画】
 
 ## 1. 适用与跳过
@@ -52,4 +52,4 @@ prompt开头：\"根据图片N中的分镜面板生成正常多镜头视频，�
 ## 8. 超出单片段的分支
 
 总内容超过合法seconds时：按自然场景/状态/动作/对白边界拆多video；独立场景并行；连续地点/光线/叙事交接串行；需前一视频时用续写规则；每新片段分别用本结构或单镜头结构。
-\`.trim();
+`.trim();

@@ -1,4 +1,4 @@
-export const VIDEO_EDITING_SKILL = String.raw\`
+export const VIDEO_EDITING_SKILL = String.raw`
 【视频编辑规则】
 
 ## 1. 适用与前提
@@ -59,4 +59,4 @@ export const VIDEO_EDITING_SKILL = String.raw\`
 - 原运动消失→加强"保持原视频全部运动节奏"。
 - 风格/剧情同时变化→拆成两个独立编辑步骤。
 - 模型不支持视频参考→从关键帧/角色/场景参考重建新镜头，不称编辑。
-\`.trim();
+`.trim();

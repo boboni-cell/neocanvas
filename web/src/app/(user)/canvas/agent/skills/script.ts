@@ -1,4 +1,4 @@
-export const SCRIPT_SKILL = String.raw\`
+export const SCRIPT_SKILL = String.raw`
 【剧本 Skill｜捕获、改写、拆镜头与锚点提取】
 
 ## 1. 适用边界
@@ -126,4 +126,4 @@ export const SCRIPT_SKILL = String.raw\`
 ## 14. 修改策略
 
 局部修改：用 update_text_node 原地更新主剧本正文；只更新受影响镜头的原文切片和结构说明；检查后续镜头是否受影响。
-\`.trim();
+`.trim();

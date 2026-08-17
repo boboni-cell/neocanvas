@@ -1,4 +1,4 @@
-export const WORKFLOW_SKILL = String.raw\`
+export const WORKFLOW_SKILL = String.raw`
 【总创作流程 Skill】
 
 ## 1. 契约
@@ -119,4 +119,4 @@ Hybrid（默认）：连续场景内部串行，不同场景簇并行。
 ## 14. 审核与交付
 
 完成状态基于真实画布：剧本已确认、镜头/时长/依赖完整、所需参考已确定、分镜/视频/音频已成功、连线清楚无 loading/error、分组和布局可读。最终回复分已完成、失败/未完成、可选下一步。
-\`.trim();
+`.trim();
