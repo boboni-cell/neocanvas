@@ -280,12 +280,6 @@ export function AppConfigModal() {
         }
         setLoadingModels(true);
         try {
-            if (apiProviderForChannel(channel) === "ark-plan") {
-                const models = channel.models.length ? channel.models : ["doubao-seedance-2.0"];
-                patchLocalChannel(channel.id, { models });
-                message.success("Agent Plan 不提供模型列表接口；已校验配置，请使用套餐内的 Seedance 模型名称");
-                return;
-            }
             if (apiProviderForChannel(channel) === "ark") {
                 message.info("火山 Ark 不提供模型列表接口；请直接在“启用模型”里输入模型名或 Endpoint ID");
                 return;
@@ -486,7 +480,7 @@ export function AppConfigModal() {
                                                     测试连接
                                                 </Button>
                                                 <Button loading={loadingModels} onClick={() => void refreshLocalChannelModels(editingChannel)}>
-                                                    {apiProviderForChannel(editingChannel) === "ark-plan" ? "校验 Agent Plan 配置" : "拉取模型"}
+                                                    拉取模型
                                                 </Button>
                                             </div>
                                         </div>

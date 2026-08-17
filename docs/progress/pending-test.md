@@ -19,4 +19,4 @@ description: 当前版本已实现但仍需人工验证的变更项
 - 首页：按黑色+荧光绿风格重做，包含品牌 Hero、创作输入框、快速入口与功能说明，并加入环境光晕漂浮、卡片悬浮、滚动入场等动效。
 - 首页主标语已改为视频方向：「从一句话开始，生成整支视频」。
 - 登录页副标题已移除；右上角 GitHub 图标已移除。
-- API 设置：已改为「我的 API」管理界面——左侧按 文本 / 图片生成 / 视频生成 / 音频 四个 tab 展示已保存接口（含使用/删除/当前操作），右侧为编辑表单（显示名称、接口服务商、Base URL、API Key、模型名称、测试连接、保存并设为当前）。接口服务商预设包括 OpenAI / DeepSeek / Anthropic Claude / Google Gemini / xAI Grok / OpenRouter / 硅基流动 / 通义千问 DashScope / Moonshot Kimi / 智谱 GLM / MiniMax / Atlas Cloud（全模型）/ Nano-GPT / 火山 Ark / 火山方舟 Agent Plan（视频）/ KIE（可灵）/ MiMo / New API / 自定义。
+- API 设置：已改为「我的 API」管理界面——左侧按 文本 / 图片生成 / 视频生成 / 音频 四个 tab 展示已保存接口（含使用/删除/当前操作），右侧为编辑表单（显示名称、接口服务商、Base URL、API Key、模型名称、测试连接、保存并设为当前）。接口服务商预设包括 OpenAI / DeepSeek / Anthropic Claude / Google Gemini / xAI Grok / OpenRouter / 硅基流动 / 通义千问 DashScope / Moonshot Kimi / 智谱 GLM / MiniMax / Atlas Cloud（全模型）/ Nano-GPT / 火山 Ark / KIE（可灵）/ MiMo / New API / 自定义。

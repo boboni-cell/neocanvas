@@ -73,7 +73,7 @@ const seedancePixels = {
 } as const;
 
 export function isSeedanceVideoConfig(config: Pick<AiConfig, "model" | "videoModel" | "baseUrl">) {
-    return isSeedanceVideoModel(config.model || config.videoModel) || isArkPlanBaseUrl(config.baseUrl);
+    return isSeedanceVideoModel(config.model || config.videoModel);
 }
 
 export function isSeedanceVideoModel(model: string) {
@@ -84,10 +84,6 @@ export function isSeedanceVideoModel(model: string) {
 export function isSeedanceFastOrMiniModel(model: string) {
     const value = model.toLowerCase();
     return isSeedanceVideoModel(value) && (value.includes("fast") || value.includes("mini"));
-}
-
-export function isArkPlanBaseUrl(baseUrl: string) {
-    return baseUrl.toLowerCase().includes("ark.cn-beijing.volces.com/api/plan/v3") || baseUrl.toLowerCase().includes("/api/plan/v3");
 }
 
 export function normalizeSeedanceResolution(value: string, model = "") {

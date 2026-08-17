@@ -429,28 +429,9 @@ export function useEffectiveConfig() {
 
 export function buildApiUrl(baseUrl: string, path: string) {
     let normalizedBaseUrl = baseUrl.trim().replace(/\/+$/, "");
-    normalizedBaseUrl = normalizeArkPlanBaseUrl(normalizedBaseUrl);
     const lowerBaseUrl = normalizedBaseUrl.toLowerCase();
-    const apiBaseUrl = lowerBaseUrl.endsWith("/v1") || lowerBaseUrl.endsWith("/api/v3") || lowerBaseUrl.endsWith("/api/plan/v3") ? normalizedBaseUrl : `${normalizedBaseUrl}/v1`;
+    const apiBaseUrl = lowerBaseUrl.endsWith("/v1") || lowerBaseUrl.endsWith("/api/v3") ? normalizedBaseUrl : `${normalizedBaseUrl}/v1`;
     return `${apiBaseUrl}${path}`;
-}
-
-function normalizeArkPlanBaseUrl(baseUrl: string) {
-    try {
-        const url = new URL(baseUrl);
-        const path = url.pathname.replace(/\/+$/, "");
-        const lowerPath = path.toLowerCase();
-        const arkPlanIndex = lowerPath.indexOf("/api/plan/v3");
-        if (arkPlanIndex < 0) return baseUrl;
-        const end = arkPlanIndex + "/api/plan/v3".length;
-        if (lowerPath.length !== end && lowerPath[end] !== "/") return baseUrl;
-        url.pathname = path.slice(0, end);
-        url.search = "";
-        url.hash = "";
-        return url.toString().replace(/\/+$/, "");
-    } catch {
-        return baseUrl;
-    }
 }
 
 export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelChannel[] {
@@ -460,12 +441,11 @@ export function normalizeLocalChannels(config: Partial<AiConfig>): LocalModelCha
         const availableModels = Array.isArray(channel.availableModels) ? channel.availableModels.filter(Boolean) : undefined;
         const capability = channel.capability || inferChannelCapability(models);
         const baseUrl = channel.baseUrl || "";
-        const legacyArkSeedance = capability === "video" && models.some((model) => isVideoModelName(model)) && baseUrl.replace(/\/+$/, "") === "https://ark.cn-beijing.volces.com/api/v3";
         return {
             id: channel.id || `local-${index + 1}`,
             protocol: channel.protocol === "kie" || channel.protocol === "mimo" ? channel.protocol : "openai",
-            name: legacyArkSeedance && channel.name === "火山 Ark" ? "火山方舟 Agent Plan（视频）" : typeof channel.name === "string" ? channel.name : `本地渠道 ${index + 1}`,
-            baseUrl: legacyArkSeedance ? "https://ark.cn-beijing.volces.com/api/plan/v3" : baseUrl,
+            name: typeof channel.name === "string" ? channel.name : `本地渠道 ${index + 1}`,
+            baseUrl,
             apiKey: channel.apiKey || "",
             models,
             availableModels,
