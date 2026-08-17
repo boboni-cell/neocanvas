@@ -164,6 +164,22 @@ export async function atlasGenerateImage(config: AiConfig, prompt: string, refer
     return images;
 }
 
+export async function atlasCreateVideoTask(config: AiConfig, prompt: string, references: ReferenceImage[]): Promise<string> {
+    const body: Record<string, unknown> = {
+        model: config.model,
+        prompt,
+    };
+    if (references.length) {
+        const imageUrl = await atlasUploadMedia(config, await referenceToFile(references[0]));
+        body.image_url = imageUrl;
+    }
+    return atlasCreatePrediction(config, "video", body);
+}
+
+export async function atlasPollVideoTask(config: AiConfig, id: string) {
+    return atlasPollPrediction(config, id);
+}
+
 export async function atlasGenerateVideo(config: AiConfig, prompt: string, references: ReferenceImage[]): Promise<AtlasGeneratedVideo> {
     const body: Record<string, unknown> = {
         model: config.model,

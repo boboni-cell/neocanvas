@@ -5,7 +5,7 @@ import { boolConfig, isSeedanceVideoConfig, normalizeSeedanceRatio } from "@/lib
 import { isKIEGrokVideoModel, isKIEKlingV3Config, kieKlingOmniVariant } from "@/components/video-settings-panel";
 import { modelKey, supportsVideoAudioGeneration } from "@/lib/video-model-capabilities";
 import { resolveMediaUrl, uploadMediaFile } from "@/services/file-storage";
-import { atlasGenerateVideo, isAtlasCloudConfig } from "@/services/api/atlas-cloud";
+import { atlasCreateVideoTask, atlasPollVideoTask, isAtlasCloudConfig } from "@/services/api/atlas-cloud";
 import { imageToDataUrl, resolveImageUrl } from "@/services/image-storage";
 import { buildApiUrl, channelIdForActiveModel, directAIProviderForConfig, localChannelForActiveModel, type AiConfig, type VideoElementReference } from "@/stores/use-config-store";
 import { useUserStore } from "@/stores/use-user-store";
@@ -94,10 +94,10 @@ export async function createVideoGenerationTask(config: AiConfig, prompt: string
     if (isAtlasCloudConfig(config)) {
         try {
             const referenceImages = normalizeVideoReferenceInput(references).references || [];
-            const generated = await atlasGenerateVideo(config, systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt, referenceImages);
-            const created: VideoResponse = { id: generated.id, status: "completed", video_url: generated.url, url: generated.url };
-            onProgress?.(100, created);
-            return { task: created, pollId: generated.id, startedAt, requestBody: { model, prompt, provider: "atlascloud" } };
+            const predictionId = await atlasCreateVideoTask(config, systemPrompt ? `${systemPrompt}\n\n${prompt}` : prompt, referenceImages);
+            const created: VideoResponse = { id: predictionId, status: "processing", progress: 0 };
+            onProgress?.(0, created);
+            return { task: created, pollId: predictionId, startedAt, requestBody: { model, prompt, provider: "atlascloud" } };
         } catch (error) {
             const { message, detail } = readAxiosError(error, "视频生成失败");
             void writeVideoAICallLog(config, model, "/model/generateVideo", "POST", startedAt, 0, stringifyLogPayload({ model, prompt, provider: "atlascloud" }), stringifyLogPayload(detail), message);
@@ -130,10 +130,26 @@ function normalizeVideoTaskCreateOptions(options?: string | VideoTaskCreateOptio
 export async function pollCreatedVideoGenerationTask(config: AiConfig, task: VideoResponse, { startedAt = Date.now(), requestBody, initialDelayMs = 0, onProgress, onPoll }: { startedAt?: number; requestBody?: unknown; initialDelayMs?: number; onProgress?: VideoProgressHandler; onPoll?: (task: VideoResponse) => void } = {}) {
     const model = config.model || config.videoModel;
     if (isAtlasCloudConfig(config)) {
-        const videoUrl = task.video_url || task.url || "";
-        if (!videoUrl) throw new VideoRequestError("视频生成完成但没有返回视频地址", task);
-        onProgress?.(100, task);
-        return buildVideoGenerationResult(task, videoUrl, Date.now() - startedAt);
+        const pollId = videoPollId(model, task) || task.id || task.task_id || "";
+        if (!pollId) throw new VideoRequestError("视频接口没有返回任务 ID", task);
+        const pollStarted = Date.now();
+        const timeoutMs = 10 * 60 * 1000;
+        for (;;) {
+            const data = await atlasPollVideoTask(config, pollId);
+            if (data.status === "completed") {
+                const url = (Array.isArray(data.outputs) ? data.outputs[0] : "") || "";
+                if (!url) throw new VideoRequestError("视频生成完成但没有返回视频地址", task);
+                const completed: VideoResponse = { ...task, id: task.id || pollId, status: "completed", video_url: url, url };
+                onProgress?.(100, completed);
+                return buildVideoGenerationResult(completed, url, Date.now() - startedAt);
+            }
+            if (data.status === "failed") throw new VideoRequestError(data.error || "视频生成失败", task);
+            const elapsed = Date.now() - pollStarted;
+            const pct = Math.min(90, Math.max(5, Math.round(elapsed / timeoutMs * 80 + 5)));
+            if (onProgress) onProgress(pct, { ...task, progress: pct });
+            if (elapsed > timeoutMs) throw new VideoRequestError("视频生成超时", task);
+            await new Promise((resolve) => setTimeout(resolve, VIDEO_POLL_INTERVAL_MS));
+        }
     }
     const pollId = videoPollId(model, task);
     if (!pollId) throw new VideoRequestError("视频接口没有返回任务 ID", task);
